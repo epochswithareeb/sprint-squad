@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,37 +30,16 @@ import {
   AlertTriangle,
   Calendar,
   User,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
-import { toast } from 'sonner';
-
-type TicketStatus = 'wip' | 'pending' | 'resolved' | 'closed';
-type TicketPriority = 'low' | 'medium' | 'high';
-
-interface Ticket {
-  id: string;
-  title: string;
-  description: string | null;
-  status: TicketStatus;
-  priority: TicketPriority;
-  project_id: string;
-  assigned_to: string | null;
-  is_code_red: boolean;
-  due_date: string | null;
-  created_at: string;
-  project?: { name: string };
-  assignee?: { email: string; full_name: string | null };
-}
-
-interface Project {
-  id: string;
-  name: string;
-}
-
-interface Profile {
-  id: string;
-  email: string;
-  full_name: string | null;
-}
+import {
+  useTicketsData,
+  useCreateTicket,
+  useUpdateTicketStatus,
+  useEscalateTicket,
+  type TicketPriority,
+} from '@/hooks/useTickets';
 
 const statusConfig = {
   wip: { label: 'Work In Progress', variant: 'status-wip' as const },
@@ -81,11 +59,6 @@ export default function Tickets() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   
   const [newTicket, setNewTicket] = useState({
     title: '',
@@ -96,137 +69,74 @@ export default function Tickets() {
     due_date: '',
   });
 
-  const fetchData = async () => {
-    try {
-      // Fetch tickets with project info
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from('tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
+  // React Query hooks
+  const { data, isLoading } = useTicketsData();
+  const createTicket = useCreateTicket();
+  const updateStatus = useUpdateTicketStatus();
+  const escalateTicket = useEscalateTicket();
 
-      if (ticketsError) throw ticketsError;
+  const tickets = data?.tickets || [];
+  const projects = data?.projects || [];
+  const users = data?.users || [];
 
-      // Fetch projects
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projects')
-        .select('id, name');
-
-      if (projectsError) throw projectsError;
-
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name');
-
-      if (usersError) throw usersError;
-
-      // Map project names and assignee info to tickets
-      const ticketsWithInfo = (ticketsData || []).map(ticket => {
-        const project = projectsData?.find(p => p.id === ticket.project_id);
-        const assignee = usersData?.find(u => u.id === ticket.assigned_to);
-        return {
-          ...ticket,
-          project: project ? { name: project.name } : undefined,
-          assignee: assignee ? { email: assignee.email, full_name: assignee.full_name } : undefined,
-        };
-      });
-
-      setTickets(ticketsWithInfo);
-      setProjects(projectsData || []);
-      setUsers(usersData || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load tickets');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const handleCreateTicket = async () => {
+  const handleCreateTicket = useCallback(async () => {
     if (!newTicket.title.trim() || !newTicket.project_id) {
-      toast.error('Please fill in all required fields');
       return;
     }
 
-    setSaving(true);
-    try {
-      const { error } = await supabase.from('tickets').insert({
-        title: newTicket.title,
-        description: newTicket.description || null,
-        project_id: newTicket.project_id,
-        priority: newTicket.priority,
-        assigned_to: newTicket.assigned_to || null,
-        due_date: newTicket.due_date || null,
-        created_by: user?.id,
-      });
+    createTicket.mutate({
+      title: newTicket.title,
+      description: newTicket.description || null,
+      project_id: newTicket.project_id,
+      priority: newTicket.priority,
+      assigned_to: newTicket.assigned_to || null,
+      due_date: newTicket.due_date || null,
+      created_by: user?.id || '',
+    }, {
+      onSuccess: () => {
+        setIsDialogOpen(false);
+        setNewTicket({
+          title: '',
+          description: '',
+          project_id: '',
+          priority: 'medium',
+          assigned_to: '',
+          due_date: '',
+        });
+      }
+    });
+  }, [newTicket, user?.id, createTicket]);
 
-      if (error) throw error;
+  const handleMarkResolved = useCallback((ticketId: string) => {
+    updateStatus.mutate({
+      ticketId,
+      status: 'resolved',
+      resolved_at: new Date().toISOString(),
+    });
+  }, [updateStatus]);
 
-      toast.success('Ticket created successfully');
-      setIsDialogOpen(false);
-      setNewTicket({
-        title: '',
-        description: '',
-        project_id: '',
-        priority: 'medium',
-        assigned_to: '',
-        due_date: '',
-      });
-      fetchData();
-    } catch (error: any) {
-      console.error('Error creating ticket:', error);
-      toast.error(error.message || 'Failed to create ticket');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleCloseTicket = useCallback((ticketId: string) => {
+    updateStatus.mutate({
+      ticketId,
+      status: 'closed',
+      closed_at: new Date().toISOString(),
+    });
+  }, [updateStatus]);
 
-  const handleMarkResolved = async (ticketId: string) => {
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ status: 'resolved', resolved_at: new Date().toISOString() })
-        .eq('id', ticketId);
+  const handleEscalate = useCallback((ticketId: string) => {
+    escalateTicket.mutate(ticketId);
+  }, [escalateTicket]);
 
-      if (error) throw error;
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tickets, searchQuery, statusFilter]);
 
-      toast.success('Ticket marked as resolved');
-      fetchData();
-    } catch (error: any) {
-      console.error('Error updating ticket:', error);
-      toast.error(error.message || 'Failed to update ticket');
-    }
-  };
-
-  const handleEscalate = async (ticketId: string) => {
-    try {
-      const { error } = await supabase
-        .from('tickets')
-        .update({ is_code_red: true })
-        .eq('id', ticketId);
-
-      if (error) throw error;
-
-      toast.success('Ticket escalated to Code Red');
-      fetchData();
-    } catch (error: any) {
-      console.error('Error escalating ticket:', error);
-      toast.error(error.message || 'Failed to escalate ticket');
-    }
-  };
-
-  const filteredTickets = tickets.filter((ticket) => {
-    const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="p-6 lg:p-8 space-y-6">
         <div className="animate-pulse space-y-4">
@@ -336,9 +246,9 @@ export default function Tickets() {
                         <SelectValue placeholder="Select user" />
                       </SelectTrigger>
                       <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.full_name || user.email}
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -359,8 +269,8 @@ export default function Tickets() {
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateTicket} disabled={saving}>
-                  {saving ? 'Creating...' : 'Create Ticket'}
+                <Button onClick={handleCreateTicket} disabled={createTicket.isPending}>
+                  {createTicket.isPending ? 'Creating...' : 'Create Ticket'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -456,24 +366,57 @@ export default function Tickets() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button variant="outline" size="sm">
                       View
                     </Button>
+                    
+                    {/* Users can mark resolved if ticket is open */}
                     {!isAdmin && ticket.status !== 'resolved' && ticket.status !== 'closed' && (
                       <Button 
                         variant="success" 
                         size="sm"
                         onClick={() => handleMarkResolved(ticket.id)}
+                        disabled={updateStatus.isPending}
                       >
-                        Mark Resolved
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Resolve
                       </Button>
                     )}
+                    
+                    {/* Users can close ticket if it's resolved */}
+                    {!isAdmin && ticket.status === 'resolved' && (
+                      <Button 
+                        variant="secondary" 
+                        size="sm"
+                        onClick={() => handleCloseTicket(ticket.id)}
+                        disabled={updateStatus.isPending}
+                      >
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Close
+                      </Button>
+                    )}
+                    
+                    {/* Users can also close open tickets directly */}
+                    {!isAdmin && ticket.status !== 'resolved' && ticket.status !== 'closed' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleCloseTicket(ticket.id)}
+                        disabled={updateStatus.isPending}
+                      >
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Close
+                      </Button>
+                    )}
+                    
+                    {/* Escalate to Code Red */}
                     {!isAdmin && !ticket.is_code_red && ticket.status !== 'closed' && (
                       <Button 
                         variant="code-red" 
                         size="sm"
                         onClick={() => handleEscalate(ticket.id)}
+                        disabled={escalateTicket.isPending}
                       >
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Escalate
@@ -486,13 +429,15 @@ export default function Tickets() {
           ))
         ) : (
           <Card className="py-12">
-            <CardContent className="text-center">
-              <TicketIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No tickets found</h3>
-              <p className="text-muted-foreground">
+            <CardContent className="flex flex-col items-center justify-center text-center">
+              <TicketIcon className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="font-semibold text-lg mb-1">No tickets found</h3>
+              <p className="text-muted-foreground text-sm">
                 {searchQuery || statusFilter !== 'all' 
-                  ? 'Try adjusting your filters' 
-                  : 'No tickets have been created yet'}
+                  ? 'Try adjusting your search or filters'
+                  : isAdmin 
+                    ? 'Create a new ticket to get started'
+                    : 'No tickets have been assigned to you yet'}
               </p>
             </CardContent>
           </Card>
