@@ -15,17 +15,9 @@ export default function DashboardLayout() {
     }
   }, [user, loading, navigate]);
 
+  // Don't show loading state - render immediately and redirect if needed
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex items-center gap-3 animate-pulse">
-          <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Zap className="h-6 w-6 text-primary" />
-          </div>
-          <span className="text-xl font-semibold">Loading...</span>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (!user) {

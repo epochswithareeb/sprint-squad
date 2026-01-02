@@ -36,17 +36,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+    
+    // Set a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        setLoading(false);
+      }
+    }, 5000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRole(session.user.id);
       }
       setLoading(false);
+    }).catch(() => {
+      if (mounted) setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -58,7 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
