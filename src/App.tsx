@@ -12,9 +12,19 @@ import Tickets from "./pages/Tickets";
 import CodeRed from "./pages/CodeRed";
 import Users from "./pages/Users";
 import Analytics from "./pages/Analytics";
+import Leaves from "./pages/Leaves";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 20000,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -33,6 +43,8 @@ const App = () => (
               <Route path="code-red" element={<CodeRed />} />
               <Route path="users" element={<Users />} />
               <Route path="analytics" element={<Analytics />} />
+              <Route path="leaves" element={<Leaves />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
