@@ -24,26 +24,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
 
   const fetchUserRole = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
-    
-    if (!error && data) {
-      setRole(data.role as UserRole);
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+      
+      if (!error && data) {
+        setRole(data.role as UserRole);
+      }
+    } catch {
+      // silently fail
     }
   };
 
   useEffect(() => {
     let mounted = true;
     
-    // Set a timeout to prevent infinite loading
     const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        setLoading(false);
-      }
-    }, 5000);
+      if (mounted && loading) setLoading(false);
+    }, 3000);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
@@ -58,12 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchUserRole(session.user.id);
+          fetchUserRole(session.user.id);
         } else {
           setRole(null);
         }
@@ -87,28 +88,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { full_name: fullName }
-      }
+      options: { data: { full_name: fullName } }
     });
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setRole(null);
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Force clear even if signOut fails
+    } finally {
+      setUser(null);
+      setSession(null);
+      setRole(null);
+    }
   };
 
   return (
     <AuthContext.Provider value={{
-      user,
-      session,
-      loading,
-      role,
+      user, session, loading, role,
       isAdmin: role === 'admin',
-      signIn,
-      signUp,
-      signOut
+      signIn, signUp, signOut
     }}>
       {children}
     </AuthContext.Provider>
