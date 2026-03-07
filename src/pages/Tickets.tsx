@@ -66,6 +66,7 @@ export default function Tickets() {
     project_id: '',
     priority: 'medium' as TicketPriority,
     assigned_to: '',
+    additional_assignees: [] as string[],
     due_date: '',
   });
 
