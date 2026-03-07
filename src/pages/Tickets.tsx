@@ -93,6 +93,7 @@ export default function Tickets() {
       assigned_to: newTicket.assigned_to || null,
       due_date: newTicket.due_date || null,
       created_by: user?.id || '',
+      additional_assignees: newTicket.additional_assignees,
     }, {
       onSuccess: () => {
         setIsDialogOpen(false);
@@ -102,6 +103,7 @@ export default function Tickets() {
           project_id: '',
           priority: 'medium',
           assigned_to: '',
+          additional_assignees: [],
           due_date: '',
         });
       }
