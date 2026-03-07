@@ -18,6 +18,7 @@ export interface Ticket {
   created_at: string;
   project?: { name: string };
   assignee?: { email: string; full_name: string | null };
+  additionalAssignees?: { id: string; email: string; full_name: string | null }[];
 }
 
 export interface Project {
@@ -31,12 +32,12 @@ export interface Profile {
   full_name: string | null;
 }
 
-// Fetch all tickets with project and assignee info
 async function fetchTicketsData() {
-  const [ticketsRes, projectsRes, usersRes] = await Promise.all([
+  const [ticketsRes, projectsRes, usersRes, assigneesRes] = await Promise.all([
     supabase.from('tickets').select('*').order('created_at', { ascending: false }),
     supabase.from('projects').select('id, name'),
     supabase.from('profiles').select('id, email, full_name'),
+    supabase.from('ticket_assignees').select('*'),
   ]);
 
   if (ticketsRes.error) throw ticketsRes.error;
@@ -46,14 +47,30 @@ async function fetchTicketsData() {
   const projectMap = new Map(projectsRes.data?.map(p => [p.id, p]) || []);
   const userMap = new Map(usersRes.data?.map(u => [u.id, u]) || []);
 
-  const tickets: Ticket[] = (ticketsRes.data || []).map(ticket => ({
-    ...ticket,
-    project: projectMap.get(ticket.project_id) ? { name: projectMap.get(ticket.project_id)!.name } : undefined,
-    assignee: userMap.get(ticket.assigned_to || '') ? {
-      email: userMap.get(ticket.assigned_to!)!.email,
-      full_name: userMap.get(ticket.assigned_to!)!.full_name,
-    } : undefined,
-  }));
+  // Group additional assignees by ticket_id
+  const assigneesByTicket = new Map<string, string[]>();
+  (assigneesRes.data || []).forEach(a => {
+    const list = assigneesByTicket.get(a.ticket_id) || [];
+    list.push(a.user_id);
+    assigneesByTicket.set(a.ticket_id, list);
+  });
+
+  const tickets: Ticket[] = (ticketsRes.data || []).map(ticket => {
+    const extraIds = assigneesByTicket.get(ticket.id) || [];
+    return {
+      ...ticket,
+      project: projectMap.get(ticket.project_id) ? { name: projectMap.get(ticket.project_id)!.name } : undefined,
+      assignee: userMap.get(ticket.assigned_to || '') ? {
+        email: userMap.get(ticket.assigned_to!)!.email,
+        full_name: userMap.get(ticket.assigned_to!)!.full_name,
+      } : undefined,
+      additionalAssignees: extraIds
+        .filter(id => id !== ticket.assigned_to)
+        .map(id => userMap.get(id))
+        .filter(Boolean)
+        .map(u => ({ id: u!.id, email: u!.email, full_name: u!.full_name })),
+    };
+  });
 
   return {
     tickets,
@@ -66,7 +83,7 @@ export function useTicketsData() {
   return useQuery({
     queryKey: ['tickets-data'],
     queryFn: fetchTicketsData,
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
   });
 }
 
@@ -74,7 +91,7 @@ export function useCreateTicket() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (ticket: {
+    mutationFn: async (params: {
       title: string;
       description: string | null;
       project_id: string;
@@ -82,9 +99,21 @@ export function useCreateTicket() {
       assigned_to: string | null;
       due_date: string | null;
       created_by: string;
+      additional_assignees?: string[];
     }) => {
-      const { error } = await supabase.from('tickets').insert(ticket);
+      const { additional_assignees, ...ticket } = params;
+      const { data, error } = await supabase.from('tickets').insert(ticket).select('id').single();
       if (error) throw error;
+
+      // Insert additional assignees
+      if (additional_assignees?.length && data) {
+        const rows = additional_assignees.map(user_id => ({
+          ticket_id: data.id,
+          user_id,
+        }));
+        const { error: aError } = await supabase.from('ticket_assignees').insert(rows);
+        if (aError) throw aError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets-data'] });

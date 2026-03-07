@@ -66,6 +66,7 @@ export default function Tickets() {
     project_id: '',
     priority: 'medium' as TicketPriority,
     assigned_to: '',
+    additional_assignees: [] as string[],
     due_date: '',
   });
 
@@ -92,6 +93,7 @@ export default function Tickets() {
       assigned_to: newTicket.assigned_to || null,
       due_date: newTicket.due_date || null,
       created_by: user?.id || '',
+      additional_assignees: newTicket.additional_assignees,
     }, {
       onSuccess: () => {
         setIsDialogOpen(false);
@@ -101,6 +103,7 @@ export default function Tickets() {
           project_id: '',
           priority: 'medium',
           assigned_to: '',
+          additional_assignees: [],
           due_date: '',
         });
       }
@@ -256,6 +259,34 @@ export default function Tickets() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label>Additional Assignees</Label>
+                  <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px]">
+                    {users
+                      .filter(u => u.id !== newTicket.assigned_to)
+                      .map(u => {
+                        const isSelected = newTicket.additional_assignees.includes(u.id);
+                        return (
+                          <Badge
+                            key={u.id}
+                            variant={isSelected ? 'default' : 'outline'}
+                            className="cursor-pointer select-none"
+                            onClick={() => {
+                              setNewTicket(prev => ({
+                                ...prev,
+                                additional_assignees: isSelected
+                                  ? prev.additional_assignees.filter(id => id !== u.id)
+                                  : [...prev.additional_assignees, u.id],
+                              }));
+                            }}
+                          >
+                            {u.full_name || u.email.split('@')[0]}
+                          </Badge>
+                        );
+                      })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Click to toggle additional assignees</p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="dueDate">Due Date</Label>
                   <Input 
                     id="dueDate" 
@@ -354,6 +385,11 @@ export default function Tickets() {
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <User className="h-3 w-3" />
                         <span>{ticket.assignee.full_name || ticket.assignee.email.split('@')[0]}</span>
+                      </div>
+                    )}
+                    {ticket.additionalAssignees && ticket.additionalAssignees.length > 0 && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <span>+{ticket.additionalAssignees.length} more</span>
                       </div>
                     )}
                     
