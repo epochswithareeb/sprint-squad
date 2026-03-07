@@ -387,6 +387,11 @@ export default function Tickets() {
                         <span>{ticket.assignee.full_name || ticket.assignee.email.split('@')[0]}</span>
                       </div>
                     )}
+                    {ticket.additionalAssignees && ticket.additionalAssignees.length > 0 && (
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <span>+{ticket.additionalAssignees.length} more</span>
+                      </div>
+                    )}
                     
                     {ticket.due_date && (
                       <div className="flex items-center gap-1 text-muted-foreground">
