@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -32,12 +34,15 @@ import {
   User,
   CheckCircle,
   XCircle,
+  Eye,
+  History,
 } from 'lucide-react';
 import {
   useTicketsData,
   useCreateTicket,
   useUpdateTicketStatus,
   useEscalateTicket,
+  type Ticket,
   type TicketPriority,
 } from '@/hooks/useTickets';
 
@@ -57,8 +62,10 @@ const priorityConfig = {
 export default function Tickets() {
   const { isAdmin, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [viewTicket, setViewTicket] = useState<Ticket | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState('active');
   
   const [newTicket, setNewTicket] = useState({
     title: '',
@@ -70,7 +77,6 @@ export default function Tickets() {
     due_date: '',
   });
 
-  // React Query hooks
   const { data, isLoading } = useTicketsData();
   const createTicket = useCreateTicket();
   const updateStatus = useUpdateTicketStatus();
@@ -81,9 +87,7 @@ export default function Tickets() {
   const users = data?.users || [];
 
   const handleCreateTicket = useCallback(async () => {
-    if (!newTicket.title.trim() || !newTicket.project_id) {
-      return;
-    }
+    if (!newTicket.title.trim() || !newTicket.project_id) return;
 
     createTicket.mutate({
       title: newTicket.title,
@@ -98,31 +102,21 @@ export default function Tickets() {
       onSuccess: () => {
         setIsDialogOpen(false);
         setNewTicket({
-          title: '',
-          description: '',
-          project_id: '',
-          priority: 'medium',
-          assigned_to: '',
-          additional_assignees: [],
-          due_date: '',
+          title: '', description: '', project_id: '',
+          priority: 'medium', assigned_to: '', additional_assignees: [], due_date: '',
         });
       }
     });
   }, [newTicket, user?.id, createTicket]);
 
-  const handleMarkResolved = useCallback((ticketId: string) => {
-    updateStatus.mutate({
-      ticketId,
-      status: 'resolved',
-      resolved_at: new Date().toISOString(),
-    });
-  }, [updateStatus]);
-
-  const handleCloseTicket = useCallback((ticketId: string) => {
+  // Resolve now also closes the ticket
+  const handleResolve = useCallback((ticketId: string) => {
+    const now = new Date().toISOString();
     updateStatus.mutate({
       ticketId,
       status: 'closed',
-      closed_at: new Date().toISOString(),
+      resolved_at: now,
+      closed_at: now,
     });
   }, [updateStatus]);
 
@@ -130,29 +124,130 @@ export default function Tickets() {
     escalateTicket.mutate(ticketId);
   }, [escalateTicket]);
 
-  const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
+  // Split tickets into active and history (closed)
+  const { activeTickets, historyTickets } = useMemo(() => {
+    const active: Ticket[] = [];
+    const history: Ticket[] = [];
+    tickets.forEach(t => {
+      if (t.status === 'closed') history.push(t);
+      else active.push(t);
+    });
+    return { activeTickets: active, historyTickets: history };
+  }, [tickets]);
+
+  const filterTickets = (list: Ticket[]) =>
+    list.filter(ticket => {
       const matchesSearch = ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
+                            ticket.id.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [tickets, searchQuery, statusFilter]);
+
+  const filteredActive = useMemo(() => filterTickets(activeTickets), [activeTickets, searchQuery, statusFilter]);
+  const filteredHistory = useMemo(() => filterTickets(historyTickets), [historyTickets, searchQuery, statusFilter]);
 
   if (isLoading) {
     return (
       <div className="p-6 lg:p-8 space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-secondary/50 rounded w-48" />
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-secondary/50 rounded-lg" />
-            ))}
-          </div>
+          {[1, 2, 3].map(i => <div key={i} className="h-24 bg-secondary/50 rounded-lg" />)}
         </div>
       </div>
     );
   }
+
+  const renderTicketCard = (ticket: Ticket, index: number, showActions: boolean) => (
+    <Card 
+      key={ticket.id} 
+      hover 
+      codeRed={ticket.is_code_red}
+      className="animate-fade-in"
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      <CardContent className="p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-mono text-muted-foreground">{ticket.id.slice(0, 8)}</span>
+              {ticket.is_code_red && (
+                <Badge variant="code-red" className="gap-1">
+                  <AlertTriangle className="h-3 w-3" />Code Red
+                </Badge>
+              )}
+            </div>
+            <h3 className="font-semibold text-lg truncate">{ticket.title}</h3>
+            <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+              {ticket.description || 'No description'}
+            </p>
+            {ticket.project && (
+              <p className="text-xs text-muted-foreground mt-1">Project: {ticket.project.name}</p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <Badge variant={priorityConfig[ticket.priority].variant}>
+              {priorityConfig[ticket.priority].label}
+            </Badge>
+            <Badge variant={statusConfig[ticket.status].variant}>
+              {statusConfig[ticket.status].label}
+            </Badge>
+            {ticket.assignee && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span>{ticket.assignee.full_name || ticket.assignee.email.split('@')[0]}</span>
+              </div>
+            )}
+            {ticket.additionalAssignees && ticket.additionalAssignees.length > 0 && (
+              <span className="text-muted-foreground">+{ticket.additionalAssignees.length} more</span>
+            )}
+            {ticket.due_date && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>{new Date(ticket.due_date).toLocaleDateString()}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => setViewTicket(ticket)}>
+              <Eye className="h-3 w-3 mr-1" />View
+            </Button>
+            {showActions && ticket.status !== 'closed' && (
+              <>
+                <Button 
+                  variant="success" size="sm"
+                  onClick={() => handleResolve(ticket.id)}
+                  disabled={updateStatus.isPending}
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />Resolve & Close
+                </Button>
+                {!ticket.is_code_red && (
+                  <Button 
+                    variant="code-red" size="sm"
+                    onClick={() => handleEscalate(ticket.id)}
+                    disabled={escalateTicket.isPending}
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />Escalate
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const emptyState = (message: string) => (
+    <Card className="py-12">
+      <CardContent className="flex flex-col items-center justify-center text-center">
+        <TicketIcon className="h-12 w-12 text-muted-foreground/50 mb-4" />
+        <h3 className="font-semibold text-lg mb-1">No tickets found</h3>
+        <p className="text-muted-foreground text-sm">{message}</p>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -164,74 +259,42 @@ export default function Tickets() {
             {isAdmin ? 'All Tickets' : 'My Tickets'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isAdmin 
-              ? 'Manage and track all tickets across projects' 
-              : 'View and update your assigned tickets'}
+            {isAdmin ? 'Manage and track all tickets across projects' : 'View and update your assigned tickets'}
           </p>
         </div>
-        
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="hero">
-                <Plus className="h-4 w-4 mr-2" />
-                New Ticket
-              </Button>
+              <Button variant="hero"><Plus className="h-4 w-4 mr-2" />New Ticket</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create New Ticket</DialogTitle>
-                <DialogDescription>
-                  Create a ticket and assign it to a team member.
-                </DialogDescription>
+                <DialogDescription>Create a ticket and assign it to a team member.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="project">Project *</Label>
-                  <Select 
-                    value={newTicket.project_id} 
-                    onValueChange={(value) => setNewTicket({ ...newTicket, project_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
+                  <Select value={newTicket.project_id} onValueChange={v => setNewTicket({ ...newTicket, project_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                     <SelectContent>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
+                      {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="title">Title *</Label>
-                  <Input 
-                    id="title" 
-                    placeholder="Brief description of the issue"
-                    value={newTicket.title}
-                    onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
-                  />
+                  <Input id="title" placeholder="Brief description of the issue" value={newTicket.title} onChange={e => setNewTicket({ ...newTicket, title: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description" 
-                    placeholder="Detailed description..."
-                    value={newTicket.description}
-                    onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                  />
+                  <Textarea id="description" placeholder="Detailed description..." value={newTicket.description} onChange={e => setNewTicket({ ...newTicket, description: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Priority</Label>
-                    <Select 
-                      value={newTicket.priority} 
-                      onValueChange={(value: TicketPriority) => setNewTicket({ ...newTicket, priority: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
+                    <Select value={newTicket.priority} onValueChange={(v: TicketPriority) => setNewTicket({ ...newTicket, priority: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
@@ -241,19 +304,10 @@ export default function Tickets() {
                   </div>
                   <div className="space-y-2">
                     <Label>Assign To</Label>
-                    <Select 
-                      value={newTicket.assigned_to} 
-                      onValueChange={(value) => setNewTicket({ ...newTicket, assigned_to: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select user" />
-                      </SelectTrigger>
+                    <Select value={newTicket.assigned_to} onValueChange={v => setNewTicket({ ...newTicket, assigned_to: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
                       <SelectContent>
-                        {users.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.full_name || u.email}
-                          </SelectItem>
-                        ))}
+                        {users.map(u => <SelectItem key={u.id} value={u.id}>{u.full_name || u.email}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -261,45 +315,34 @@ export default function Tickets() {
                 <div className="space-y-2">
                   <Label>Additional Assignees</Label>
                   <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px]">
-                    {users
-                      .filter(u => u.id !== newTicket.assigned_to)
-                      .map(u => {
-                        const isSelected = newTicket.additional_assignees.includes(u.id);
-                        return (
-                          <Badge
-                            key={u.id}
-                            variant={isSelected ? 'default' : 'outline'}
-                            className="cursor-pointer select-none"
-                            onClick={() => {
-                              setNewTicket(prev => ({
-                                ...prev,
-                                additional_assignees: isSelected
-                                  ? prev.additional_assignees.filter(id => id !== u.id)
-                                  : [...prev.additional_assignees, u.id],
-                              }));
-                            }}
-                          >
-                            {u.full_name || u.email.split('@')[0]}
-                          </Badge>
-                        );
-                      })}
+                    {users.filter(u => u.id !== newTicket.assigned_to).map(u => {
+                      const isSelected = newTicket.additional_assignees.includes(u.id);
+                      return (
+                        <Badge
+                          key={u.id}
+                          variant={isSelected ? 'default' : 'outline'}
+                          className="cursor-pointer select-none"
+                          onClick={() => setNewTicket(prev => ({
+                            ...prev,
+                            additional_assignees: isSelected
+                              ? prev.additional_assignees.filter(id => id !== u.id)
+                              : [...prev.additional_assignees, u.id],
+                          }))}
+                        >
+                          {u.full_name || u.email.split('@')[0]}
+                        </Badge>
+                      );
+                    })}
                   </div>
                   <p className="text-xs text-muted-foreground">Click to toggle additional assignees</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dueDate">Due Date</Label>
-                  <Input 
-                    id="dueDate" 
-                    type="date"
-                    value={newTicket.due_date}
-                    onChange={(e) => setNewTicket({ ...newTicket, due_date: e.target.value })}
-                  />
+                  <Input id="dueDate" type="date" value={newTicket.due_date} onChange={e => setNewTicket({ ...newTicket, due_date: e.target.value })} />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                 <Button onClick={handleCreateTicket} disabled={createTicket.isPending}>
                   {createTicket.isPending ? 'Creating...' : 'Create Ticket'}
                 </Button>
@@ -313,17 +356,11 @@ export default function Tickets() {
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tickets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Search tickets..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter by status" />
+            <Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -335,150 +372,125 @@ export default function Tickets() {
         </Select>
       </div>
 
-      {/* Tickets List */}
-      <div className="space-y-4">
-        {filteredTickets.length > 0 ? (
-          filteredTickets.map((ticket, index) => (
-            <Card 
-              key={ticket.id} 
-              hover 
-              codeRed={ticket.is_code_red}
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  {/* Ticket Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-mono text-muted-foreground">
-                        {ticket.id.slice(0, 8)}
-                      </span>
-                      {ticket.is_code_red && (
-                        <Badge variant="code-red" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Code Red
-                        </Badge>
-                      )}
+      {/* Tabs: Active vs History */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="active" className="gap-2">
+            <TicketIcon className="h-4 w-4" />Active ({activeTickets.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />History ({historyTickets.length})
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="active" className="space-y-4 mt-4">
+          {filteredActive.length > 0
+            ? filteredActive.map((t, i) => renderTicketCard(t, i, true))
+            : emptyState(searchQuery || statusFilter !== 'all' ? 'Try adjusting your search or filters' : isAdmin ? 'Create a new ticket to get started' : 'No tickets have been assigned to you yet')}
+        </TabsContent>
+        <TabsContent value="history" className="space-y-4 mt-4">
+          {filteredHistory.length > 0
+            ? filteredHistory.map((t, i) => renderTicketCard(t, i, false))
+            : emptyState('No closed tickets yet')}
+        </TabsContent>
+      </Tabs>
+
+      {/* View Ticket Dialog */}
+      <Dialog open={!!viewTicket} onOpenChange={open => { if (!open) setViewTicket(null); }}>
+        <DialogContent className="max-w-lg">
+          {viewTicket && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-mono text-muted-foreground">{viewTicket.id.slice(0, 8)}</span>
+                  {viewTicket.is_code_red && (
+                    <Badge variant="code-red" className="gap-1"><AlertTriangle className="h-3 w-3" />Code Red</Badge>
+                  )}
+                </div>
+                <DialogTitle className="text-xl">{viewTicket.title}</DialogTitle>
+                <DialogDescription>
+                  {viewTicket.project ? `Project: ${viewTicket.project.name}` : 'No project'}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
+                  <p className="text-sm whitespace-pre-wrap bg-muted/50 rounded-md p-3">
+                    {viewTicket.description || 'No description provided.'}
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Status</span>
+                    <div className="mt-1">
+                      <Badge variant={statusConfig[viewTicket.status].variant}>
+                        {statusConfig[viewTicket.status].label}
+                      </Badge>
                     </div>
-                    <h3 className="font-semibold text-lg truncate">{ticket.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                      {ticket.description || 'No description'}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Priority</span>
+                    <div className="mt-1">
+                      <Badge variant={priorityConfig[viewTicket.priority].variant}>
+                        {priorityConfig[viewTicket.priority].label}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Assigned To</span>
+                    <p className="mt-1 font-medium">
+                      {viewTicket.assignee ? (viewTicket.assignee.full_name || viewTicket.assignee.email) : 'Unassigned'}
                     </p>
-                    {ticket.project && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Project: {ticket.project.name}
-                      </p>
-                    )}
                   </div>
-
-                  {/* Meta Info */}
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <Badge variant={priorityConfig[ticket.priority].variant}>
-                      {priorityConfig[ticket.priority].label}
-                    </Badge>
-                    <Badge variant={statusConfig[ticket.status].variant}>
-                      {statusConfig[ticket.status].label}
-                    </Badge>
-                    
-                    {ticket.assignee && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span>{ticket.assignee.full_name || ticket.assignee.email.split('@')[0]}</span>
-                      </div>
-                    )}
-                    {ticket.additionalAssignees && ticket.additionalAssignees.length > 0 && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span>+{ticket.additionalAssignees.length} more</span>
-                      </div>
-                    )}
-                    
-                    {ticket.due_date && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(ticket.due_date).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 flex-wrap">
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                    
-                    {/* Users can mark resolved if ticket is open */}
-                    {!isAdmin && ticket.status !== 'resolved' && ticket.status !== 'closed' && (
-                      <Button 
-                        variant="success" 
-                        size="sm"
-                        onClick={() => handleMarkResolved(ticket.id)}
-                        disabled={updateStatus.isPending}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Resolve
-                      </Button>
-                    )}
-                    
-                    {/* Users can close ticket if it's resolved */}
-                    {!isAdmin && ticket.status === 'resolved' && (
-                      <Button 
-                        variant="secondary" 
-                        size="sm"
-                        onClick={() => handleCloseTicket(ticket.id)}
-                        disabled={updateStatus.isPending}
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Close
-                      </Button>
-                    )}
-                    
-                    {/* Users can also close open tickets directly */}
-                    {!isAdmin && ticket.status !== 'resolved' && ticket.status !== 'closed' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleCloseTicket(ticket.id)}
-                        disabled={updateStatus.isPending}
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Close
-                      </Button>
-                    )}
-                    
-                    {/* Escalate to Code Red */}
-                    {!isAdmin && !ticket.is_code_red && ticket.status !== 'closed' && (
-                      <Button 
-                        variant="code-red" 
-                        size="sm"
-                        onClick={() => handleEscalate(ticket.id)}
-                        disabled={escalateTicket.isPending}
-                      >
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Escalate
-                      </Button>
-                    )}
+                  <div>
+                    <span className="text-muted-foreground">Due Date</span>
+                    <p className="mt-1 font-medium">
+                      {viewTicket.due_date ? new Date(viewTicket.due_date).toLocaleDateString() : 'No due date'}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <Card className="py-12">
-            <CardContent className="flex flex-col items-center justify-center text-center">
-              <TicketIcon className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="font-semibold text-lg mb-1">No tickets found</h3>
-              <p className="text-muted-foreground text-sm">
-                {searchQuery || statusFilter !== 'all' 
-                  ? 'Try adjusting your search or filters'
-                  : isAdmin 
-                    ? 'Create a new ticket to get started'
-                    : 'No tickets have been assigned to you yet'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+
+                {viewTicket.additionalAssignees && viewTicket.additionalAssignees.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <span className="text-sm text-muted-foreground">Additional Assignees</span>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {viewTicket.additionalAssignees.map(a => (
+                          <Badge key={a.id} variant="outline">{a.full_name || a.email.split('@')[0]}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Created: {new Date(viewTicket.created_at).toLocaleString()}</p>
+                  {viewTicket.resolved_at && <p>Resolved: {new Date(viewTicket.resolved_at).toLocaleString()}</p>}
+                  {viewTicket.closed_at && <p>Closed: {new Date(viewTicket.closed_at).toLocaleString()}</p>}
+                </div>
+              </div>
+
+              <DialogFooter>
+                {viewTicket.status !== 'closed' && (
+                  <Button
+                    variant="success"
+                    onClick={() => { handleResolve(viewTicket.id); setViewTicket(null); }}
+                    disabled={updateStatus.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />Resolve & Close
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setViewTicket(null)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -16,6 +16,8 @@ export interface Ticket {
   is_code_red: boolean;
   due_date: string | null;
   created_at: string;
+  resolved_at: string | null;
+  closed_at: string | null;
   project?: { name: string };
   assignee?: { email: string; full_name: string | null };
   additionalAssignees?: { id: string; email: string; full_name: string | null }[];
