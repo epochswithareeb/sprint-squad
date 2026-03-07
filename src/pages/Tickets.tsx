@@ -259,6 +259,34 @@ export default function Tickets() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label>Additional Assignees</Label>
+                  <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px]">
+                    {users
+                      .filter(u => u.id !== newTicket.assigned_to)
+                      .map(u => {
+                        const isSelected = newTicket.additional_assignees.includes(u.id);
+                        return (
+                          <Badge
+                            key={u.id}
+                            variant={isSelected ? 'default' : 'outline'}
+                            className="cursor-pointer select-none"
+                            onClick={() => {
+                              setNewTicket(prev => ({
+                                ...prev,
+                                additional_assignees: isSelected
+                                  ? prev.additional_assignees.filter(id => id !== u.id)
+                                  : [...prev.additional_assignees, u.id],
+                              }));
+                            }}
+                          >
+                            {u.full_name || u.email.split('@')[0]}
+                          </Badge>
+                        );
+                      })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Click to toggle additional assignees</p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="dueDate">Due Date</Label>
                   <Input 
                     id="dueDate" 
