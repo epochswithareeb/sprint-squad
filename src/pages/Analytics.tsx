@@ -91,7 +91,7 @@ export default function Analytics() {
 
         setData({
           totalTickets: ticketsList.length,
-          resolvedTickets: ticketsList.filter(t => t.status === 'resolved' || t.status === 'closed').length,
+          resolvedTickets: ticketsList.filter(t => t.status === 'closed').length,
           codeRedCount: ticketsList.filter(t => t.is_code_red && t.status !== 'closed').length,
           statusDistribution,
           userPerformance,

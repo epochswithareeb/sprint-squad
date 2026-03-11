@@ -155,12 +155,12 @@ export default function Dashboard() {
 
         <Card hover className="animate-fade-in stagger-3">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Resolved</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Closed</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.resolved}</div>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting admin closure</p>
+            <div className="text-3xl font-bold">{stats.closed}</div>
+            <p className="text-xs text-muted-foreground mt-1">Completed tickets</p>
           </CardContent>
         </Card>
 

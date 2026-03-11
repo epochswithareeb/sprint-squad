@@ -196,17 +196,14 @@ export default function Reports() {
                     </td>
                     <td className="text-center py-3 px-2 font-bold">{u.total}</td>
                     <td className="text-center py-3 px-2">
-                      <Badge variant="status-wip">{u.wip}</Badge>
-                    </td>
-                    <td className="text-center py-3 px-2">
-                      <Badge variant="status-pending">{u.pending}</Badge>
-                    </td>
-                    <td className="text-center py-3 px-2">
-                      <Badge variant="status-resolved">{u.resolved}</Badge>
-                    </td>
-                    <td className="text-center py-3 px-2">
-                      <Badge variant="secondary">{u.closed}</Badge>
-                    </td>
+                       <Badge variant="status-pending">{u.assigned}</Badge>
+                     </td>
+                     <td className="text-center py-3 px-2">
+                       <Badge variant="status-wip">{u.wip}</Badge>
+                     </td>
+                     <td className="text-center py-3 px-2">
+                       <Badge variant="secondary">{u.closed}</Badge>
+                     </td>
                     <td className="text-center py-3 px-2">
                       {u.codeRed > 0 ? (
                         <Badge variant="code-red">{u.codeRed}</Badge>

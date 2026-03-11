@@ -70,7 +70,7 @@ export default function Projects() {
           return {
             ...project,
             ticket_count: tickets?.length || 0,
-            open_tickets: tickets?.filter(t => t.status === 'wip' || t.status === 'pending').length || 0,
+            open_tickets: tickets?.filter(t => t.status === 'wip' || t.status === 'assigned').length || 0,
           };
         })
       );

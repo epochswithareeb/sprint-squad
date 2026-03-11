@@ -9,47 +9,23 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { 
-  Ticket as TicketIcon, 
-  Plus, 
-  Search,
-  Filter,
-  AlertTriangle,
-  Calendar,
-  User,
-  CheckCircle,
-  XCircle,
-  Eye,
-  History,
+  Ticket as TicketIcon, Plus, Search, Filter, AlertTriangle,
+  Calendar, User, CheckCircle, Eye, History, Play,
 } from 'lucide-react';
 import {
-  useTicketsData,
-  useCreateTicket,
-  useUpdateTicketStatus,
-  useEscalateTicket,
-  type Ticket,
-  type TicketPriority,
+  useTicketsData, useCreateTicket, useUpdateTicketStatus, useEscalateTicket,
+  type Ticket, type TicketPriority,
 } from '@/hooks/useTickets';
 
 const statusConfig = {
+  assigned: { label: 'Assigned', variant: 'status-pending' as const },
   wip: { label: 'Work In Progress', variant: 'status-wip' as const },
-  pending: { label: 'Pending', variant: 'status-pending' as const },
-  resolved: { label: 'Resolved', variant: 'status-resolved' as const },
   closed: { label: 'Closed', variant: 'secondary' as const },
 };
 
@@ -109,14 +85,15 @@ export default function Tickets() {
     });
   }, [newTicket, user?.id, createTicket]);
 
-  // Resolve now also closes the ticket
-  const handleResolve = useCallback((ticketId: string) => {
-    const now = new Date().toISOString();
+  const handleStartWork = useCallback((ticketId: string) => {
+    updateStatus.mutate({ ticketId, status: 'wip' });
+  }, [updateStatus]);
+
+  const handleCloseTicket = useCallback((ticketId: string) => {
     updateStatus.mutate({
       ticketId,
       status: 'closed',
-      resolved_at: now,
-      closed_at: now,
+      closed_at: new Date().toISOString(),
     });
   }, [updateStatus]);
 
@@ -215,14 +192,25 @@ export default function Tickets() {
             </Button>
             {showActions && ticket.status !== 'closed' && (
               <>
-                <Button 
-                  variant="success" size="sm"
-                  onClick={() => handleResolve(ticket.id)}
-                  disabled={updateStatus.isPending}
-                >
-                  <CheckCircle className="h-3 w-3 mr-1" />Resolve & Close
-                </Button>
-                {!ticket.is_code_red && (
+                {ticket.status === 'assigned' && (
+                  <Button 
+                    variant="default" size="sm"
+                    onClick={() => handleStartWork(ticket.id)}
+                    disabled={updateStatus.isPending}
+                  >
+                    <Play className="h-3 w-3 mr-1" />Start Work
+                  </Button>
+                )}
+                {ticket.status === 'wip' && (
+                  <Button 
+                    variant="success" size="sm"
+                    onClick={() => handleCloseTicket(ticket.id)}
+                    disabled={updateStatus.isPending}
+                  >
+                    <CheckCircle className="h-3 w-3 mr-1" />Close Ticket
+                  </Button>
+                )}
+                {!ticket.is_code_red && isAdmin && (
                   <Button 
                     variant="code-red" size="sm"
                     onClick={() => handleEscalate(ticket.id)}
@@ -364,9 +352,8 @@ export default function Tickets() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="assigned">Assigned</SelectItem>
             <SelectItem value="wip">Work In Progress</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
             <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
         </Select>
@@ -470,19 +457,27 @@ export default function Tickets() {
                 <Separator />
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>Created: {new Date(viewTicket.created_at).toLocaleString()}</p>
-                  {viewTicket.resolved_at && <p>Resolved: {new Date(viewTicket.resolved_at).toLocaleString()}</p>}
                   {viewTicket.closed_at && <p>Closed: {new Date(viewTicket.closed_at).toLocaleString()}</p>}
                 </div>
               </div>
 
               <DialogFooter>
-                {viewTicket.status !== 'closed' && (
+                {viewTicket.status === 'assigned' && (
                   <Button
-                    variant="success"
-                    onClick={() => { handleResolve(viewTicket.id); setViewTicket(null); }}
+                    variant="default"
+                    onClick={() => { handleStartWork(viewTicket.id); setViewTicket(null); }}
                     disabled={updateStatus.isPending}
                   >
-                    <CheckCircle className="h-4 w-4 mr-1" />Resolve & Close
+                    <Play className="h-4 w-4 mr-1" />Start Work
+                  </Button>
+                )}
+                {viewTicket.status === 'wip' && (
+                  <Button
+                    variant="success"
+                    onClick={() => { handleCloseTicket(viewTicket.id); setViewTicket(null); }}
+                    disabled={updateStatus.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />Close Ticket
                   </Button>
                 )}
                 <Button variant="outline" onClick={() => setViewTicket(null)}>Close</Button>
