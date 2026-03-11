@@ -64,16 +64,14 @@ export default function Analytics() {
 
         // Calculate status distribution
         const statusCounts = {
+          assigned: ticketsList.filter(t => t.status === 'assigned').length,
           wip: ticketsList.filter(t => t.status === 'wip').length,
-          pending: ticketsList.filter(t => t.status === 'pending').length,
-          resolved: ticketsList.filter(t => t.status === 'resolved').length,
           closed: ticketsList.filter(t => t.status === 'closed').length,
         };
 
         const statusDistribution = [
+          { name: 'Assigned', value: statusCounts.assigned, color: 'hsl(var(--warning))' },
           { name: 'WIP', value: statusCounts.wip, color: 'hsl(var(--primary))' },
-          { name: 'Pending', value: statusCounts.pending, color: 'hsl(var(--warning))' },
-          { name: 'Resolved', value: statusCounts.resolved, color: 'hsl(var(--success))' },
           { name: 'Closed', value: statusCounts.closed, color: 'hsl(var(--muted-foreground))' },
         ].filter(s => s.value > 0);
 
@@ -81,7 +79,7 @@ export default function Analytics() {
         const userPerformance = (profiles || [])
           .map(profile => {
             const userTickets = ticketsList.filter(t => t.assigned_to === profile.id);
-            const resolved = userTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+            const resolved = userTickets.filter(t => t.status === 'closed').length;
             return {
               name: profile.full_name || profile.email.split('@')[0],
               resolved,
@@ -93,7 +91,7 @@ export default function Analytics() {
 
         setData({
           totalTickets: ticketsList.length,
-          resolvedTickets: ticketsList.filter(t => t.status === 'resolved' || t.status === 'closed').length,
+          resolvedTickets: ticketsList.filter(t => t.status === 'closed').length,
           codeRedCount: ticketsList.filter(t => t.is_code_red && t.status !== 'closed').length,
           statusDistribution,
           userPerformance,

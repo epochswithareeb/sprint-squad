@@ -52,7 +52,7 @@ export default function Reports() {
       // Tickets created on this day
       const created = data.tickets.filter(t => t.created_at.startsWith(dayStr));
       // Tickets resolved on this day
-      const resolved = data.tickets.filter(t => t.resolved_at && t.resolved_at.startsWith(dayStr));
+      const resolved = data.tickets.filter(t => t.closed_at && t.closed_at.startsWith(dayStr));
       // Tickets closed on this day
       const closed = data.tickets.filter(t => t.closed_at && t.closed_at.startsWith(dayStr));
       // Leaves on this day
@@ -84,8 +84,7 @@ export default function Reports() {
         email: p.email,
         total: userTickets.length,
         wip: userTickets.filter(t => t.status === 'wip').length,
-        pending: userTickets.filter(t => t.status === 'pending').length,
-        resolved: userTickets.filter(t => t.status === 'resolved').length,
+        assigned: userTickets.filter(t => t.status === 'assigned').length,
         closed: userTickets.filter(t => t.status === 'closed').length,
         codeRed: userTickets.filter(t => t.is_code_red && t.status !== 'closed').length,
       };
@@ -182,10 +181,9 @@ export default function Reports() {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-2 text-muted-foreground font-medium">User</th>
                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Total</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">WIP</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">Pending</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">Resolved</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">Closed</th>
+                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Assigned</th>
+                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">WIP</th>
+                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Closed</th>
                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Code Red</th>
                 </tr>
               </thead>
@@ -198,17 +196,14 @@ export default function Reports() {
                     </td>
                     <td className="text-center py-3 px-2 font-bold">{u.total}</td>
                     <td className="text-center py-3 px-2">
-                      <Badge variant="status-wip">{u.wip}</Badge>
-                    </td>
-                    <td className="text-center py-3 px-2">
-                      <Badge variant="status-pending">{u.pending}</Badge>
-                    </td>
-                    <td className="text-center py-3 px-2">
-                      <Badge variant="status-resolved">{u.resolved}</Badge>
-                    </td>
-                    <td className="text-center py-3 px-2">
-                      <Badge variant="secondary">{u.closed}</Badge>
-                    </td>
+                       <Badge variant="status-pending">{u.assigned}</Badge>
+                     </td>
+                     <td className="text-center py-3 px-2">
+                       <Badge variant="status-wip">{u.wip}</Badge>
+                     </td>
+                     <td className="text-center py-3 px-2">
+                       <Badge variant="secondary">{u.closed}</Badge>
+                     </td>
                     <td className="text-center py-3 px-2">
                       {u.codeRed > 0 ? (
                         <Badge variant="code-red">{u.codeRed}</Badge>
@@ -220,7 +215,7 @@ export default function Reports() {
                 ))}
                 {userSummary.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <td colSpan={6} className="text-center py-8 text-muted-foreground">
                       No ticket data available
                     </td>
                   </tr>

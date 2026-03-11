@@ -78,7 +78,7 @@ export default function Users() {
           full_name: profile.full_name,
           role: (userRole?.role || 'user') as 'admin' | 'user',
           tickets_assigned: userTickets.length,
-          tickets_resolved: userTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length,
+          tickets_resolved: userTickets.filter(t => t.status === 'closed').length,
           created_at: profile.created_at,
         };
       });

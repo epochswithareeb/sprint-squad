@@ -45,8 +45,8 @@ export default function Dashboard() {
     const t = data.tickets;
     return {
       total: t.length,
-      open: t.filter(x => x.status === 'wip' || x.status === 'pending').length,
-      resolved: t.filter(x => x.status === 'resolved').length,
+      open: t.filter(x => x.status === 'wip' || x.status === 'assigned').length,
+      closed: t.filter(x => x.status === 'closed').length,
       overdue: t.filter(x => x.due_date && new Date(x.due_date) < now && x.status !== 'closed').length,
       codeRed: t.filter(x => x.is_code_red && x.status !== 'closed').length,
       projects: data.projects.length,
@@ -148,19 +148,19 @@ export default function Dashboard() {
             <div className="text-3xl font-bold">{stats.open}</div>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="status-wip">WIP</Badge>
-              <Badge variant="status-pending">Pending</Badge>
+              <Badge variant="status-pending">Assigned</Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card hover className="animate-fade-in stagger-3">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Resolved</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Closed</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.resolved}</div>
-            <p className="text-xs text-muted-foreground mt-1">Awaiting admin closure</p>
+            <div className="text-3xl font-bold">{stats.closed}</div>
+            <p className="text-xs text-muted-foreground mt-1">Completed tickets</p>
           </CardContent>
         </Card>
 

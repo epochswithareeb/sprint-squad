@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type TicketStatus = 'wip' | 'pending' | 'resolved' | 'closed';
+export type TicketStatus = 'assigned' | 'wip' | 'closed';
 export type TicketPriority = 'low' | 'medium' | 'high';
 
 export interface Ticket {
@@ -16,7 +16,6 @@ export interface Ticket {
   is_code_red: boolean;
   due_date: string | null;
   created_at: string;
-  resolved_at: string | null;
   closed_at: string | null;
   project?: { name: string };
   assignee?: { email: string; full_name: string | null };
@@ -49,7 +48,6 @@ async function fetchTicketsData() {
   const projectMap = new Map(projectsRes.data?.map(p => [p.id, p]) || []);
   const userMap = new Map(usersRes.data?.map(u => [u.id, u]) || []);
 
-  // Group additional assignees by ticket_id
   const assigneesByTicket = new Map<string, string[]>();
   (assigneesRes.data || []).forEach(a => {
     const list = assigneesByTicket.get(a.ticket_id) || [];
@@ -107,7 +105,6 @@ export function useCreateTicket() {
       const { data, error } = await supabase.from('tickets').insert(ticket).select('id').single();
       if (error) throw error;
 
-      // Insert additional assignees
       if (additional_assignees?.length && data) {
         const rows = additional_assignees.map(user_id => ({
           ticket_id: data.id,
@@ -131,14 +128,12 @@ export function useUpdateTicketStatus() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ ticketId, status, resolved_at, closed_at }: {
+    mutationFn: async ({ ticketId, status, closed_at }: {
       ticketId: string;
       status: TicketStatus;
-      resolved_at?: string | null;
       closed_at?: string | null;
     }) => {
       const updateData: Record<string, unknown> = { status };
-      if (resolved_at !== undefined) updateData.resolved_at = resolved_at;
       if (closed_at !== undefined) updateData.closed_at = closed_at;
       
       const { error } = await supabase
@@ -149,7 +144,7 @@ export function useUpdateTicketStatus() {
     },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['tickets-data'] });
-      const message = status === 'resolved' ? 'Ticket marked as resolved' : 
+      const message = status === 'wip' ? 'Ticket marked as Work In Progress' : 
                       status === 'closed' ? 'Ticket closed' : 'Ticket updated';
       toast.success(message);
     },
