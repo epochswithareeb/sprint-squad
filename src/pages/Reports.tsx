@@ -84,8 +84,7 @@ export default function Reports() {
         email: p.email,
         total: userTickets.length,
         wip: userTickets.filter(t => t.status === 'wip').length,
-        pending: userTickets.filter(t => t.status === 'pending').length,
-        resolved: userTickets.filter(t => t.status === 'resolved').length,
+        assigned: userTickets.filter(t => t.status === 'assigned').length,
         closed: userTickets.filter(t => t.status === 'closed').length,
         codeRed: userTickets.filter(t => t.is_code_red && t.status !== 'closed').length,
       };
