@@ -79,7 +79,7 @@ export default function Analytics() {
         const userPerformance = (profiles || [])
           .map(profile => {
             const userTickets = ticketsList.filter(t => t.assigned_to === profile.id);
-            const resolved = userTickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+            const resolved = userTickets.filter(t => t.status === 'closed').length;
             return {
               name: profile.full_name || profile.email.split('@')[0],
               resolved,
