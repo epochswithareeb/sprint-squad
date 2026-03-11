@@ -181,10 +181,9 @@ export default function Reports() {
                 <tr className="border-b border-border">
                   <th className="text-left py-3 px-2 text-muted-foreground font-medium">User</th>
                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Total</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">WIP</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">Pending</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">Resolved</th>
-                  <th className="text-center py-3 px-2 text-muted-foreground font-medium">Closed</th>
+                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Assigned</th>
+                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">WIP</th>
+                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Closed</th>
                   <th className="text-center py-3 px-2 text-muted-foreground font-medium">Code Red</th>
                 </tr>
               </thead>
