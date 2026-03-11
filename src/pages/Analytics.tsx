@@ -64,16 +64,14 @@ export default function Analytics() {
 
         // Calculate status distribution
         const statusCounts = {
+          assigned: ticketsList.filter(t => t.status === 'assigned').length,
           wip: ticketsList.filter(t => t.status === 'wip').length,
-          pending: ticketsList.filter(t => t.status === 'pending').length,
-          resolved: ticketsList.filter(t => t.status === 'resolved').length,
           closed: ticketsList.filter(t => t.status === 'closed').length,
         };
 
         const statusDistribution = [
+          { name: 'Assigned', value: statusCounts.assigned, color: 'hsl(var(--warning))' },
           { name: 'WIP', value: statusCounts.wip, color: 'hsl(var(--primary))' },
-          { name: 'Pending', value: statusCounts.pending, color: 'hsl(var(--warning))' },
-          { name: 'Resolved', value: statusCounts.resolved, color: 'hsl(var(--success))' },
           { name: 'Closed', value: statusCounts.closed, color: 'hsl(var(--muted-foreground))' },
         ].filter(s => s.value > 0);
 
