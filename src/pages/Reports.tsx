@@ -52,7 +52,7 @@ export default function Reports() {
       // Tickets created on this day
       const created = data.tickets.filter(t => t.created_at.startsWith(dayStr));
       // Tickets resolved on this day
-      const resolved = data.tickets.filter(t => t.resolved_at && t.resolved_at.startsWith(dayStr));
+      const resolved = data.tickets.filter(t => t.closed_at && t.closed_at.startsWith(dayStr));
       // Tickets closed on this day
       const closed = data.tickets.filter(t => t.closed_at && t.closed_at.startsWith(dayStr));
       // Leaves on this day
