@@ -212,7 +212,6 @@ export type Database = {
           is_code_red: boolean
           priority: Database["public"]["Enums"]["ticket_priority"]
           project_id: string
-          resolved_at: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           title: string
           updated_at: string
@@ -228,7 +227,6 @@ export type Database = {
           is_code_red?: boolean
           priority?: Database["public"]["Enums"]["ticket_priority"]
           project_id: string
-          resolved_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           title: string
           updated_at?: string
@@ -244,7 +242,6 @@ export type Database = {
           is_code_red?: boolean
           priority?: Database["public"]["Enums"]["ticket_priority"]
           project_id?: string
-          resolved_at?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           title?: string
           updated_at?: string
@@ -297,7 +294,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       ticket_priority: "low" | "medium" | "high"
-      ticket_status: "wip" | "pending" | "resolved" | "closed"
+      ticket_status: "assigned" | "wip" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -427,7 +424,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       ticket_priority: ["low", "medium", "high"],
-      ticket_status: ["wip", "pending", "resolved", "closed"],
+      ticket_status: ["assigned", "wip", "closed"],
     },
   },
 } as const
