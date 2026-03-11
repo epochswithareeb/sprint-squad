@@ -45,8 +45,8 @@ export default function Dashboard() {
     const t = data.tickets;
     return {
       total: t.length,
-      open: t.filter(x => x.status === 'wip' || x.status === 'pending').length,
-      resolved: t.filter(x => x.status === 'resolved').length,
+      open: t.filter(x => x.status === 'wip' || x.status === 'assigned').length,
+      closed: t.filter(x => x.status === 'closed').length,
       overdue: t.filter(x => x.due_date && new Date(x.due_date) < now && x.status !== 'closed').length,
       codeRed: t.filter(x => x.is_code_red && x.status !== 'closed').length,
       projects: data.projects.length,
