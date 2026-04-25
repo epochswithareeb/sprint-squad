@@ -339,6 +339,41 @@ export default function Analytics() {
           </Card>
         )}
       </div>
+
+      {/* PR Reviewer Metrics */}
+      <Card className="animate-fade-in">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            PR Review Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.prReviewerStats.some(r => r.reviews > 0) ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.prReviewerStats}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="reviews" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-muted-foreground">
+              No PR reviews recorded yet
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
