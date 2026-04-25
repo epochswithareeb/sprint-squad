@@ -17,6 +17,7 @@ export interface Ticket {
   due_date: string | null;
   created_at: string;
   closed_at: string | null;
+  pr_reviewer: string | null;
   project?: { name: string };
   assignee?: { email: string; full_name: string | null };
   additionalAssignees?: { id: string; email: string; full_name: string | null }[];
@@ -128,13 +129,15 @@ export function useUpdateTicketStatus() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ ticketId, status, closed_at }: {
+    mutationFn: async ({ ticketId, status, closed_at, pr_reviewer }: {
       ticketId: string;
       status: TicketStatus;
       closed_at?: string | null;
+      pr_reviewer?: string | null;
     }) => {
       const updateData: Record<string, unknown> = { status };
       if (closed_at !== undefined) updateData.closed_at = closed_at;
+      if (pr_reviewer !== undefined) updateData.pr_reviewer = pr_reviewer;
       
       const { error } = await supabase
         .from('tickets')
@@ -171,6 +174,59 @@ export function useEscalateTicket() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to escalate ticket');
+    },
+  });
+}
+
+export interface TicketComment {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  author?: { email: string; full_name: string | null };
+}
+
+export function useTicketComments(ticketId: string | null) {
+  return useQuery({
+    queryKey: ['ticket-comments', ticketId],
+    enabled: !!ticketId,
+    queryFn: async (): Promise<TicketComment[]> => {
+      const { data, error } = await supabase
+        .from('ticket_comments')
+        .select('*')
+        .eq('ticket_id', ticketId!)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      const userIds = Array.from(new Set((data || []).map(c => c.user_id)));
+      let authorMap = new Map<string, { email: string; full_name: string | null }>();
+      if (userIds.length) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .in('id', userIds);
+        authorMap = new Map((profiles || []).map(p => [p.id, { email: p.email, full_name: p.full_name }]));
+      }
+      return (data || []).map(c => ({ ...c, author: authorMap.get(c.user_id) }));
+    },
+    staleTime: 15000,
+  });
+}
+
+export function useAddComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ticket_id, user_id, content }: { ticket_id: string; user_id: string; content: string }) => {
+      const { error } = await supabase
+        .from('ticket_comments')
+        .insert({ ticket_id, user_id, content });
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['ticket-comments', vars.ticket_id] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add comment');
     },
   });
 }
