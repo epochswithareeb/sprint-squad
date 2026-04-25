@@ -30,6 +30,7 @@ interface AnalyticsData {
   codeRedCount: number;
   statusDistribution: { name: string; value: number; color: string }[];
   userPerformance: { name: string; resolved: number }[];
+  prReviewerStats: { name: string; reviews: number }[];
 }
 
 export default function Analytics() {
@@ -40,6 +41,7 @@ export default function Analytics() {
     codeRedCount: 0,
     statusDistribution: [],
     userPerformance: [],
+    prReviewerStats: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -89,12 +91,19 @@ export default function Analytics() {
           .sort((a, b) => b.resolved - a.resolved)
           .slice(0, 5);
 
+        const reviewers = ['Administrator', 'Areeb Ahmad', 'Prince Kumar', 'Princy'];
+        const prReviewerStats = reviewers.map(name => ({
+          name,
+          reviews: ticketsList.filter(t => (t as { pr_reviewer?: string | null }).pr_reviewer === name).length,
+        }));
+
         setData({
           totalTickets: ticketsList.length,
           resolvedTickets: ticketsList.filter(t => t.status === 'closed').length,
           codeRedCount: ticketsList.filter(t => t.is_code_red && t.status !== 'closed').length,
           statusDistribution,
           userPerformance,
+          prReviewerStats,
         });
       } catch (error) {
         console.error('Error fetching analytics:', error);
@@ -330,6 +339,41 @@ export default function Analytics() {
           </Card>
         )}
       </div>
+
+      {/* PR Reviewer Metrics */}
+      <Card className="animate-fade-in">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            PR Review Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.prReviewerStats.some(r => r.reviews > 0) ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.prReviewerStats}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="reviews" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-muted-foreground">
+              No PR reviews recorded yet
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
