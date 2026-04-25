@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
@@ -16,12 +17,15 @@ import {
 } from '@/components/ui/select';
 import { 
   Ticket as TicketIcon, Plus, Search, Filter, AlertTriangle,
-  Calendar, User, CheckCircle, Eye, History, Play,
+  Calendar, User, CheckCircle, Eye, History, Play, MessageSquare, Send,
 } from 'lucide-react';
 import {
   useTicketsData, useCreateTicket, useUpdateTicketStatus, useEscalateTicket,
+  useTicketComments, useAddComment,
   type Ticket, type TicketPriority,
 } from '@/hooks/useTickets';
+
+const PR_REVIEWERS = ['Administrator', 'Areeb Ahmad', 'Prince Kumar', 'Princy'] as const;
 
 const statusConfig = {
   assigned: { label: 'Assigned', variant: 'status-pending' as const },
@@ -42,6 +46,10 @@ export default function Tickets() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('active');
+  const [commentText, setCommentText] = useState('');
+  const [prReviewer, setPrReviewer] = useState<string>('');
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [closingTicketId, setClosingTicketId] = useState<string | null>(null);
   
   const [newTicket, setNewTicket] = useState({
     title: '',
@@ -57,6 +65,8 @@ export default function Tickets() {
   const createTicket = useCreateTicket();
   const updateStatus = useUpdateTicketStatus();
   const escalateTicket = useEscalateTicket();
+  const { data: comments = [] } = useTicketComments(viewTicket?.id ?? null);
+  const addComment = useAddComment();
 
   const tickets = data?.tickets || [];
   const projects = data?.projects || [];
@@ -89,13 +99,36 @@ export default function Tickets() {
     updateStatus.mutate({ ticketId, status: 'wip' });
   }, [updateStatus]);
 
-  const handleCloseTicket = useCallback((ticketId: string) => {
+  const requestCloseTicket = useCallback((ticketId: string) => {
+    setClosingTicketId(ticketId);
+    setPrReviewer('');
+    setCloseDialogOpen(true);
+  }, []);
+
+  const confirmCloseTicket = useCallback(() => {
+    if (!closingTicketId || !prReviewer) return;
     updateStatus.mutate({
-      ticketId,
+      ticketId: closingTicketId,
       status: 'closed',
       closed_at: new Date().toISOString(),
+      pr_reviewer: prReviewer,
+    }, {
+      onSuccess: () => {
+        setCloseDialogOpen(false);
+        setClosingTicketId(null);
+        setPrReviewer('');
+        setViewTicket(null);
+      }
     });
-  }, [updateStatus]);
+  }, [closingTicketId, prReviewer, updateStatus]);
+
+  const handleSubmitComment = useCallback(() => {
+    if (!viewTicket || !commentText.trim() || !user?.id) return;
+    addComment.mutate(
+      { ticket_id: viewTicket.id, user_id: user.id, content: commentText.trim() },
+      { onSuccess: () => setCommentText('') }
+    );
+  }, [viewTicket, commentText, user?.id, addComment]);
 
   const handleEscalate = useCallback((ticketId: string) => {
     escalateTicket.mutate(ticketId);
@@ -204,7 +237,7 @@ export default function Tickets() {
                 {ticket.status === 'wip' && (
                   <Button 
                     variant="success" size="sm"
-                    onClick={() => handleCloseTicket(ticket.id)}
+                    onClick={() => requestCloseTicket(ticket.id)}
                     disabled={updateStatus.isPending}
                   >
                     <CheckCircle className="h-3 w-3 mr-1" />Close Ticket
