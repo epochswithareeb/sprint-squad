@@ -168,6 +168,33 @@ export type Database = {
           },
         ]
       }
+      ticket_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          ticket_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ticket_notes: {
         Row: {
           content: string
@@ -210,6 +237,7 @@ export type Database = {
           due_date: string | null
           id: string
           is_code_red: boolean
+          pr_reviewer: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
           project_id: string
           status: Database["public"]["Enums"]["ticket_status"]
@@ -225,6 +253,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_code_red?: boolean
+          pr_reviewer?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           project_id: string
           status?: Database["public"]["Enums"]["ticket_status"]
@@ -240,6 +269,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_code_red?: boolean
+          pr_reviewer?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           project_id?: string
           status?: Database["public"]["Enums"]["ticket_status"]
