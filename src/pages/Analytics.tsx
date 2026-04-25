@@ -30,6 +30,7 @@ interface AnalyticsData {
   codeRedCount: number;
   statusDistribution: { name: string; value: number; color: string }[];
   userPerformance: { name: string; resolved: number }[];
+  prReviewerStats: { name: string; reviews: number }[];
 }
 
 export default function Analytics() {
@@ -40,6 +41,7 @@ export default function Analytics() {
     codeRedCount: 0,
     statusDistribution: [],
     userPerformance: [],
+    prReviewerStats: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -89,12 +91,19 @@ export default function Analytics() {
           .sort((a, b) => b.resolved - a.resolved)
           .slice(0, 5);
 
+        const reviewers = ['Administrator', 'Areeb Ahmad', 'Prince Kumar', 'Princy'];
+        const prReviewerStats = reviewers.map(name => ({
+          name,
+          reviews: ticketsList.filter(t => (t as { pr_reviewer?: string | null }).pr_reviewer === name).length,
+        }));
+
         setData({
           totalTickets: ticketsList.length,
           resolvedTickets: ticketsList.filter(t => t.status === 'closed').length,
           codeRedCount: ticketsList.filter(t => t.is_code_red && t.status !== 'closed').length,
           statusDistribution,
           userPerformance,
+          prReviewerStats,
         });
       } catch (error) {
         console.error('Error fetching analytics:', error);
