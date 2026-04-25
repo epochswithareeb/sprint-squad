@@ -416,10 +416,10 @@ export default function Tickets() {
 
       {/* View Ticket Dialog */}
       <Dialog open={!!viewTicket} onOpenChange={open => { if (!open) setViewTicket(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
           {viewTicket && (
             <>
-              <DialogHeader>
+              <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-mono text-muted-foreground">{viewTicket.id.slice(0, 8)}</span>
                   {viewTicket.is_code_red && (
@@ -432,12 +432,13 @@ export default function Tickets() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4 py-2">
+              <ScrollArea className="flex-1 px-6">
+              <div className="space-y-4 py-2 pr-2">
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
-                  <p className="text-sm whitespace-pre-wrap bg-muted/50 rounded-md p-3">
+                  <div className="text-sm whitespace-pre-wrap break-words bg-muted/50 rounded-md p-3 max-h-72 overflow-y-auto">
                     {viewTicket.description || 'No description provided.'}
-                  </p>
+                  </div>
                 </div>
 
                 <Separator />
@@ -491,10 +492,51 @@ export default function Tickets() {
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>Created: {new Date(viewTicket.created_at).toLocaleString()}</p>
                   {viewTicket.closed_at && <p>Closed: {new Date(viewTicket.closed_at).toLocaleString()}</p>}
+                  {viewTicket.pr_reviewer && <p>PR Reviewed by: {viewTicket.pr_reviewer}</p>}
+                </div>
+
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+                    <MessageSquare className="h-4 w-4" />Comments ({comments.length})
+                  </h4>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {comments.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No comments yet. Be the first to comment.</p>
+                    )}
+                    {comments.map(c => (
+                      <div key={c.id} className="rounded-md border bg-muted/30 p-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span className="font-medium text-foreground">
+                            {c.author?.full_name || c.author?.email?.split('@')[0] || 'User'}
+                          </span>
+                          <span>{new Date(c.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap break-words">{c.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Textarea
+                      placeholder="Write a comment..."
+                      value={commentText}
+                      onChange={e => setCommentText(e.target.value)}
+                      className="min-h-[60px]"
+                    />
+                    <Button
+                      onClick={handleSubmitComment}
+                      disabled={!commentText.trim() || addComment.isPending}
+                      size="icon"
+                      className="self-end"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
+              </ScrollArea>
 
-              <DialogFooter>
+              <DialogFooter className="px-6 py-4 border-t shrink-0">
                 {viewTicket.status === 'assigned' && (
                   <Button
                     variant="default"
@@ -507,7 +549,7 @@ export default function Tickets() {
                 {viewTicket.status === 'wip' && (
                   <Button
                     variant="success"
-                    onClick={() => { handleCloseTicket(viewTicket.id); setViewTicket(null); }}
+                    onClick={() => requestCloseTicket(viewTicket.id)}
                     disabled={updateStatus.isPending}
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />Close Ticket
@@ -517,6 +559,40 @@ export default function Tickets() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Ticket / PR Reviewer Dialog */}
+      <Dialog open={closeDialogOpen} onOpenChange={open => { if (!open) { setCloseDialogOpen(false); setClosingTicketId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Close Ticket</DialogTitle>
+            <DialogDescription>
+              Please select who reviewed the PR for this ticket. This is required before closing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>PR Reviewed By *</Label>
+            <Select value={prReviewer} onValueChange={setPrReviewer}>
+              <SelectTrigger><SelectValue placeholder="Select reviewer" /></SelectTrigger>
+              <SelectContent>
+                {PR_REVIEWERS.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCloseDialogOpen(false); setClosingTicketId(null); }}>Cancel</Button>
+            <Button
+              variant="success"
+              onClick={confirmCloseTicket}
+              disabled={!prReviewer || updateStatus.isPending}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Confirm Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
