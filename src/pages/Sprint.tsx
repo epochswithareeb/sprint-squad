@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,17 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Zap, Plus, Play, CheckCircle, StopCircle, Trophy, User } from 'lucide-react';
-import { useTicketsData } from '@/hooks/useTickets';
+import { Zap, Plus, Play, CheckCircle, StopCircle, Trophy, User, Eye, MessageSquare, Send } from 'lucide-react';
+import { useTicketsData, useTicketComments, useAddComment } from '@/hooks/useTickets';
 import {
   useActiveSprint, useStartSprint, useEndSprint,
   useSprintTickets, useCreateSprintTicket, useUpdateSprintTicket,
+  type SprintTicket,
 } from '@/hooks/useSprint';
 
 export default function Sprint() {
@@ -32,9 +35,14 @@ export default function Sprint() {
   const [openStart, setOpenStart] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
   const [sprintName, setSprintName] = useState('');
+  const [viewTicket, setViewTicket] = useState<SprintTicket | null>(null);
+  const [commentText, setCommentText] = useState('');
   const [form, setForm] = useState({
     title: '', description: '', project_id: '', priority: 'medium' as 'low'|'medium'|'high', assigned_to: '',
   });
+
+  const { data: comments = [] } = useTicketComments(viewTicket?.id ?? null);
+  const addComment = useAddComment();
 
   const projects = tdata?.projects || [];
   const users = tdata?.users || [];
@@ -85,6 +93,16 @@ export default function Sprint() {
       }
     });
   };
+
+  const handleSubmitComment = useCallback(() => {
+    if (!viewTicket || !commentText.trim() || !user?.id) return;
+    addComment.mutate(
+      { ticket_id: viewTicket.id, user_id: user.id, content: commentText.trim() },
+      { onSuccess: () => setCommentText('') }
+    );
+  }, [viewTicket, commentText, user?.id, addComment]);
+
+  const projectMap = useMemo(() => new Map((tdata?.projects || []).map(p => [p.id, p])), [tdata?.projects]);
 
   if (sLoading) return <div className="p-8 text-muted-foreground">Loading sprint…</div>;
 
@@ -225,6 +243,9 @@ export default function Sprint() {
                         <Badge style={{ background: 'hsl(var(--sprint) / 0.2)', color: 'hsl(var(--sprint))', borderColor: 'hsl(var(--sprint) / 0.4)' }} variant="outline">
                           {t.status === 'wip' ? 'In Progress' : t.status === 'closed' ? 'Closed' : 'Assigned'}
                         </Badge>
+                        <Button size="sm" variant="outline" onClick={() => setViewTicket(t)}>
+                          <Eye className="h-3 w-3 mr-1" />View
+                        </Button>
                         {t.status === 'assigned' && (t.assigned_to === user?.id || isAdmin) && (
                           <Button size="sm" variant="sprint" onClick={() => updateTicket.mutate({ id: t.id, status: 'wip', sprint_id: sprint.id })}>
                             <Play className="h-3 w-3" />Start
@@ -263,6 +284,132 @@ export default function Sprint() {
           </div>
         </div>
       )}
+
+      {/* View Sprint Ticket Dialog */}
+      <Dialog open={!!viewTicket} onOpenChange={open => { if (!open) setViewTicket(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          {viewTicket && (
+            <>
+              <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-mono text-muted-foreground">{viewTicket.id.slice(0, 8)}</span>
+                  <Badge style={{ background: 'hsl(var(--sprint) / 0.2)', color: 'hsl(var(--sprint))', borderColor: 'hsl(var(--sprint) / 0.4)' }} variant="outline">
+                    {viewTicket.status === 'wip' ? 'In Progress' : viewTicket.status === 'closed' ? 'Closed' : 'Assigned'}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-xl">{viewTicket.title}</DialogTitle>
+                <DialogDescription>
+                  {projectMap.get(viewTicket.project_id)?.name || 'No project'}
+                </DialogDescription>
+              </DialogHeader>
+
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 py-2 pr-2">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
+                    <div className="text-sm whitespace-pre-wrap break-words bg-muted/50 rounded-md p-3 max-h-72 overflow-y-auto">
+                      {viewTicket.description || 'No description provided.'}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Status</span>
+                      <p className="mt-1 font-medium capitalize">{viewTicket.status === 'wip' ? 'In Progress' : viewTicket.status}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Priority</span>
+                      <p className="mt-1 font-medium capitalize">{viewTicket.priority}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Assigned To</span>
+                      <p className="mt-1 font-medium">
+                        {viewTicket.assigned_to ? (userMap.get(viewTicket.assigned_to)?.full_name || userMap.get(viewTicket.assigned_to)?.email || 'Unknown') : 'Unassigned'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Created</span>
+                      <p className="mt-1 font-medium">{new Date(viewTicket.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+
+                  {viewTicket.closed_at && (
+                    <>
+                      <Separator />
+                      <div className="text-xs text-muted-foreground">
+                        <p>Closed: {new Date(viewTicket.closed_at).toLocaleString()}</p>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4" />Comments ({comments.length})
+                    </h4>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {comments.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No comments yet. Be the first to comment.</p>
+                      )}
+                      {comments.map(c => (
+                        <div key={c.id} className="rounded-md border bg-muted/30 p-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                            <span className="font-medium text-foreground">
+                              {c.author?.full_name || c.author?.email?.split('@')[0] || 'User'}
+                            </span>
+                            <span>{new Date(c.created_at).toLocaleString()}</span>
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap break-words">{c.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Textarea
+                        placeholder="Write a comment..."
+                        value={commentText}
+                        onChange={e => setCommentText(e.target.value)}
+                        className="min-h-[60px]"
+                      />
+                      <Button
+                        onClick={handleSubmitComment}
+                        disabled={!commentText.trim() || addComment.isPending}
+                        size="icon"
+                        className="self-end"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+
+              <DialogFooter className="px-6 py-4 border-t shrink-0">
+                {viewTicket.status === 'assigned' && (viewTicket.assigned_to === user?.id || isAdmin) && (
+                  <Button
+                    variant="sprint"
+                    onClick={() => { updateTicket.mutate({ id: viewTicket.id, status: 'wip', sprint_id: sprint!.id }); setViewTicket(null); }}
+                    disabled={updateTicket.isPending}
+                  >
+                    <Play className="h-4 w-4 mr-1" />Start Work
+                  </Button>
+                )}
+                {viewTicket.status === 'wip' && (viewTicket.assigned_to === user?.id || isAdmin) && (
+                  <Button
+                    variant="sprint"
+                    onClick={() => { updateTicket.mutate({ id: viewTicket.id, status: 'closed', sprint_id: sprint!.id }); setViewTicket(null); }}
+                    disabled={updateTicket.isPending}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />Close Ticket
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setViewTicket(null)}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {!sprint && !isAdmin && (
         <Card><CardContent className="p-12 text-center text-muted-foreground">
