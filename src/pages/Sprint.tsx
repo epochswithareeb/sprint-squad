@@ -243,6 +243,9 @@ export default function Sprint() {
                         <Badge style={{ background: 'hsl(var(--sprint) / 0.2)', color: 'hsl(var(--sprint))', borderColor: 'hsl(var(--sprint) / 0.4)' }} variant="outline">
                           {t.status === 'wip' ? 'In Progress' : t.status === 'closed' ? 'Closed' : 'Assigned'}
                         </Badge>
+                        <Button size="sm" variant="outline" onClick={() => setViewTicket(t)}>
+                          <Eye className="h-3 w-3 mr-1" />View
+                        </Button>
                         {t.status === 'assigned' && (t.assigned_to === user?.id || isAdmin) && (
                           <Button size="sm" variant="sprint" onClick={() => updateTicket.mutate({ id: t.id, status: 'wip', sprint_id: sprint.id })}>
                             <Play className="h-3 w-3" />Start
