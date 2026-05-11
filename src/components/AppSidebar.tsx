@@ -18,6 +18,7 @@ const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Projects', url: '/dashboard/projects', icon: FolderKanban },
   { title: 'Tickets', url: '/dashboard/tickets', icon: Ticket },
+  { title: 'Sprint', url: '/dashboard/sprint', icon: Rocket },
   { title: 'Code Red', url: '/dashboard/code-red', icon: AlertTriangle },
   { title: 'Reports', url: '/dashboard/reports', icon: FileText },
   { title: 'Leaves', url: '/dashboard/leaves', icon: CalendarDays },
