@@ -94,6 +94,16 @@ export default function Sprint() {
     });
   };
 
+  const handleSubmitComment = useCallback(() => {
+    if (!viewTicket || !commentText.trim() || !user?.id) return;
+    addComment.mutate(
+      { ticket_id: viewTicket.id, user_id: user.id, content: commentText.trim() },
+      { onSuccess: () => setCommentText('') }
+    );
+  }, [viewTicket, commentText, user?.id, addComment]);
+
+  const projectMap = useMemo(() => new Map((tdata?.projects || []).map(p => [p.id, p])), [tdata?.projects]);
+
   if (sLoading) return <div className="p-8 text-muted-foreground">Loading sprint…</div>;
 
   return (
