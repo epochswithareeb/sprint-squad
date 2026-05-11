@@ -36,7 +36,7 @@ export interface Profile {
 
 async function fetchTicketsData() {
   const [ticketsRes, projectsRes, usersRes, assigneesRes] = await Promise.all([
-    supabase.from('tickets').select('*').order('created_at', { ascending: false }),
+    supabase.from('tickets').select('*').is('sprint_id', null).order('created_at', { ascending: false }),
     supabase.from('projects').select('id, name'),
     supabase.from('profiles').select('id, email, full_name'),
     supabase.from('ticket_assignees').select('*'),
