@@ -39,6 +39,10 @@
     --code-red: 0 84% 60%;
     --code-red-glow: 0 84% 60%;
 
+    --sprint: 142 76% 45%;
+    --sprint-glow: 142 90% 55%;
+    --sprint-foreground: 0 0% 100%;
+
     --priority-low: 142 76% 36%;
     --priority-medium: 38 92% 50%;
     --priority-high: 0 72% 51%;
