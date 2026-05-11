@@ -1,5 +1,6 @@
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveSprint } from '@/hooks/useSprint';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -7,7 +8,7 @@ import {
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard, FolderKanban, Ticket, Users, BarChart3,
-  AlertTriangle, LogOut, Zap, CalendarDays, FileText,
+  AlertTriangle, LogOut, Zap, CalendarDays, FileText, Rocket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const adminNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Projects', url: '/dashboard/projects', icon: FolderKanban },
   { title: 'Tickets', url: '/dashboard/tickets', icon: Ticket },
+  { title: 'Sprint', url: '/dashboard/sprint', icon: Rocket },
   { title: 'Code Red', url: '/dashboard/code-red', icon: AlertTriangle },
   { title: 'Reports', url: '/dashboard/reports', icon: FileText },
   { title: 'Leaves', url: '/dashboard/leaves', icon: CalendarDays },
@@ -37,6 +39,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, signOut } = useAuth();
+  const { data: activeSprint } = useActiveSprint();
 
   const navItems = isAdmin ? adminNavItems : userNavItems;
 
@@ -62,6 +65,31 @@ export function AppSidebar() {
       </div>
 
       <SidebarContent className="px-2 py-4">
+        {activeSprint && (
+          <div className={cn('px-2 mb-3', collapsed && 'px-0')}>
+            <Link
+              to="/dashboard/sprint"
+              className={cn(
+                'flex items-center gap-2 rounded-lg font-bold text-white transition-all',
+                'animate-pulse-glow',
+                collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2.5'
+              )}
+              style={{
+                background: 'hsl(var(--sprint))',
+                boxShadow: '0 0 24px hsl(var(--sprint) / 0.6)',
+              }}
+              title="Sprint is LIVE"
+            >
+              <Rocket className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && (
+                <div className="flex flex-col leading-tight">
+                  <span className="text-sm">SPRINT LIVE</span>
+                  <span className="text-[10px] font-normal opacity-90 truncate">{activeSprint.name}</span>
+                </div>
+              )}
+            </Link>
+          </div>
+        )}
         <SidebarGroup>
           {!collapsed && (
             <SidebarGroupLabel className="text-muted-foreground text-xs uppercase tracking-wider mb-2">

@@ -46,6 +46,11 @@ export default {
           DEFAULT: "hsl(var(--code-red))",
           glow: "hsl(var(--code-red-glow))",
         },
+        sprint: {
+          DEFAULT: "hsl(var(--sprint))",
+          glow: "hsl(var(--sprint-glow))",
+          foreground: "hsl(var(--sprint-foreground))",
+        },
         priority: {
           low: "hsl(var(--priority-low))",
           medium: "hsl(var(--priority-medium))",

@@ -19,6 +19,7 @@ const buttonVariants = cva(
         "code-red": "bg-code-red text-destructive-foreground font-semibold shadow-code-red hover:bg-code-red/90 animate-pulse-glow",
         success: "bg-success text-success-foreground hover:bg-success/90",
         warning: "bg-warning text-warning-foreground hover:bg-warning/90",
+        sprint: "bg-sprint text-sprint-foreground font-bold shadow-[0_0_24px_hsl(var(--sprint)/0.55)] hover:bg-sprint/90 hover:shadow-[0_0_36px_hsl(var(--sprint)/0.75)] animate-pulse-glow",
       },
       size: {
         default: "h-10 px-4 py-2",

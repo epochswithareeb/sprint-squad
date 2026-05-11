@@ -14,6 +14,7 @@ import Users from "./pages/Users";
 import Analytics from "./pages/Analytics";
 import Leaves from "./pages/Leaves";
 import Reports from "./pages/Reports";
+import Sprint from "./pages/Sprint";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -45,6 +46,7 @@ const App: React.FC = () => (
               <Route path="analytics" element={<Analytics />} />
               <Route path="leaves" element={<Leaves />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="sprint" element={<Sprint />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

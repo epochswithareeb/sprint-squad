@@ -101,6 +101,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sprints: {
+        Row: {
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          id: string
+          name: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          id?: string
+          name: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          id?: string
+          name?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_activity: {
         Row: {
           action: string
@@ -240,6 +273,7 @@ export type Database = {
           pr_reviewer: string | null
           priority: Database["public"]["Enums"]["ticket_priority"]
           project_id: string
+          sprint_id: string | null
           status: Database["public"]["Enums"]["ticket_status"]
           title: string
           updated_at: string
@@ -256,6 +290,7 @@ export type Database = {
           pr_reviewer?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           project_id: string
+          sprint_id?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           title: string
           updated_at?: string
@@ -272,6 +307,7 @@ export type Database = {
           pr_reviewer?: string | null
           priority?: Database["public"]["Enums"]["ticket_priority"]
           project_id?: string
+          sprint_id?: string | null
           status?: Database["public"]["Enums"]["ticket_status"]
           title?: string
           updated_at?: string
@@ -282,6 +318,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
             referencedColumns: ["id"]
           },
         ]
