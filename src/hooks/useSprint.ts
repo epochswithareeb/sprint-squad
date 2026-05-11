@@ -51,7 +51,7 @@ export function useStartSprint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ name, created_by }: { name: string; created_by: string }) => {
-      const { error } = await supabase.from('sprints').insert({ name, created_by, status: 'active' });
+      const { error } = await sb.from('sprints').insert({ name, created_by, status: 'active' });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -126,7 +126,7 @@ export function useCreateSprintTicket() {
       assigned_to: string;
       created_by: string;
     }) => {
-      const { error } = await supabase.from('tickets').insert(params);
+      const { error } = await sb.from('tickets').insert(params);
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
@@ -144,7 +144,7 @@ export function useUpdateSprintTicket() {
     mutationFn: async ({ id, status, sprint_id }: { id: string; status: 'assigned'|'wip'|'closed'; sprint_id: string }) => {
       const update: Record<string, unknown> = { status };
       if (status === 'closed') update.closed_at = new Date().toISOString();
-      const { error } = await supabase.from('tickets').update(update).eq('id', id);
+      const { error } = await sb.from('tickets').update(update).eq('id', id);
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
