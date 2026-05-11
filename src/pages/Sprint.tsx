@@ -35,9 +35,14 @@ export default function Sprint() {
   const [openStart, setOpenStart] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
   const [sprintName, setSprintName] = useState('');
+  const [viewTicket, setViewTicket] = useState<SprintTicket | null>(null);
+  const [commentText, setCommentText] = useState('');
   const [form, setForm] = useState({
     title: '', description: '', project_id: '', priority: 'medium' as 'low'|'medium'|'high', assigned_to: '',
   });
+
+  const { data: comments = [] } = useTicketComments(viewTicket?.id ?? null);
+  const addComment = useAddComment();
 
   const projects = tdata?.projects || [];
   const users = tdata?.users || [];
