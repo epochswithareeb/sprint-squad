@@ -20,7 +20,7 @@ export function useActiveSprint() {
   return useQuery({
     queryKey: ['active-sprint'],
     queryFn: async (): Promise<Sprint | null> => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('sprints')
         .select('*')
         .eq('status', 'active')
@@ -36,7 +36,7 @@ export function useAllSprints() {
   return useQuery({
     queryKey: ['sprints'],
     queryFn: async (): Promise<Sprint[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('sprints')
         .select('*')
         .order('started_at', { ascending: false });
@@ -67,7 +67,7 @@ export function useEndSprint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, cancel }: { id: string; cancel?: boolean }) => {
-      const { error } = await supabase
+      const { error } = await sb
         .from('sprints')
         .update({ status: cancel ? 'cancelled' : 'ended', ended_at: new Date().toISOString() })
         .eq('id', id);
@@ -102,7 +102,7 @@ export function useSprintTickets(sprintId: string | null | undefined) {
     queryKey: ['sprint-tickets', sprintId],
     enabled: !!sprintId,
     queryFn: async (): Promise<SprintTicket[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('tickets')
         .select('*')
         .eq('sprint_id', sprintId!)
