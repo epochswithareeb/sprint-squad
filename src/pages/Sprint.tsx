@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Zap, Plus, Play, CheckCircle, StopCircle, Trophy, User, Eye, MessageSquare, Send } from 'lucide-react';
 import { useTicketsData, useTicketComments, useAddComment } from '@/hooks/useTickets';
+import { TicketAttachments } from '@/components/TicketAttachments';
 import {
   useActiveSprint, useStartSprint, useEndSprint,
   useSprintTickets, useCreateSprintTicket, useUpdateSprintTicket,
@@ -349,6 +350,11 @@ export default function Sprint() {
                     <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
                       <MessageSquare className="h-4 w-4" />Comments ({comments.length})
                     </h4>
+                  </div>
+                  <Separator />
+                  <TicketAttachments ticketId={viewTicket.id} />
+                  <Separator />
+                  <div>
                     <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                       {comments.length === 0 && (
                         <p className="text-xs text-muted-foreground">No comments yet. Be the first to comment.</p>
