@@ -24,6 +24,7 @@ import {
   useTicketComments, useAddComment,
   type Ticket, type TicketPriority,
 } from '@/hooks/useTickets';
+import { TicketAttachments } from '@/components/TicketAttachments';
 
 const PR_REVIEWERS = ['Administrator', 'Areeb Ahmad', 'Prince Kumar', 'Princy'] as const;
 
@@ -500,6 +501,11 @@ export default function Tickets() {
                   <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
                     <MessageSquare className="h-4 w-4" />Comments ({comments.length})
                   </h4>
+                </div>
+                <Separator />
+                <TicketAttachments ticketId={viewTicket.id} />
+                <Separator />
+                <div>
                   <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                     {comments.length === 0 && (
                       <p className="text-xs text-muted-foreground">No comments yet. Be the first to comment.</p>
